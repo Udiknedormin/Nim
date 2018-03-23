@@ -1145,7 +1145,8 @@ proc typeRelImpl(c: var TCandidate, f, aOrig: PType,
         else:
           fRange = prev
       let ff = f.sons[1].skipTypes({tyTypeDesc})
-      let aa = a.sons[1].skipTypes({tyTypeDesc})
+      # This typeDesc rule is wrong, see bug #7331
+      let aa = a.sons[1] #.skipTypes({tyTypeDesc})
 
       if f.sons[0].kind != tyGenericParam and aa.kind == tyEmpty:
         result = isGeneric
@@ -1242,7 +1243,9 @@ proc typeRelImpl(c: var TCandidate, f, aOrig: PType,
         if result < isGeneric: result = isNone
     elif a.kind == tyGenericParam:
       result = isGeneric
-  of tyForward: internalError("forward type in typeRel()")
+  of tyForward:
+    #internalError("forward type in typeRel()")
+    result = isNone
   of tyNil:
     if a.kind == f.kind: result = isEqual
   of tyTuple:

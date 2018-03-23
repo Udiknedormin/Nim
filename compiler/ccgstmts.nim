@@ -243,7 +243,10 @@ proc genSingleVar(p: BProc, a: PNode) =
           if params != nil: params.add(~", ")
           assert(sonsLen(typ) == sonsLen(typ.n))
           add(params, genOtherArg(p, value, i, typ))
-        lineF(p, cpsStmts, "$#($#);$n", [decl, params])
+        if params == nil:
+          lineF(p, cpsStmts, "$#;$n", [decl])
+        else:
+          lineF(p, cpsStmts, "$#($#);$n", [decl, params])
       else:
         initLocExprSingleUse(p, value, tmp)
         lineF(p, cpsStmts, "$# = $#;$n", [decl, tmp.rdLoc])
@@ -962,6 +965,7 @@ proc genAsmOrEmitStmt(p: BProc, t: PNode, isAsmStmt=false): Rope =
       elif sym.kind == skType:
         res.add($getTypeDesc(p.module, sym.typ))
       else:
+        discard getTypeDesc(p.module, skipTypes(sym.typ, abstractPtrs))
         var r = sym.loc.r
         if r == nil:
           # if no name has already been given,
@@ -972,10 +976,10 @@ proc genAsmOrEmitStmt(p: BProc, t: PNode, isAsmStmt=false): Rope =
     of nkTypeOfExpr:
       res.add($getTypeDesc(p.module, t.sons[i].typ))
     else:
+      discard getTypeDesc(p.module, skipTypes(t[i].typ, abstractPtrs))
       var a: TLoc
-      initLocExpr(p, t.sons[i], a)
+      initLocExpr(p, t[i], a)
       res.add($a.rdLoc)
-      #internalError(t.sons[i].info, "genAsmOrEmitStmt()")
 
   if isAsmStmt and hasGnuAsm in CC[cCompiler].props:
     for x in splitLines(res):

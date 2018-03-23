@@ -192,6 +192,10 @@ proc semConv(c: PContext, n: PNode): PNode =
 
   result.addSon copyTree(n.sons[0])
 
+  # special case to make MyObject(x = 3) produce a nicer error message:
+  if n[1].kind == nkExprEqExpr and
+      targetType.skipTypes(abstractPtrs).kind == tyObject:
+    localError(n.info, "object contruction uses ':', not '='")
   var op = semExprWithType(c, n.sons[1])
   if targetType.isMetaType:
     let final = inferWithMetatype(c, targetType, op, true)
@@ -2376,7 +2380,14 @@ proc semExpr(c: PContext, n: PNode, flags: TExprFlags = {}): PNode =
   of nkMacroDef: result = semMacroDef(c, n)
   of nkTemplateDef: result = semTemplateDef(c, n)
   of nkImportStmt:
-    if not isTopLevel(c): localError(n.info, errXOnlyAtModuleScope, "import")
+    # this particular way allows 'import' in a 'compiles' context so that
+    # template canImport(x): bool =
+    #   compiles:
+    #     import x
+    #
+    # works:
+    if c.currentScope.depthLevel > 2 + c.compilesContextId:
+      localError(n.info, errXOnlyAtModuleScope, "import")
     result = evalImport(c, n)
   of nkImportExceptStmt:
     if not isTopLevel(c): localError(n.info, errXOnlyAtModuleScope, "import")
